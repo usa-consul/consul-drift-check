@@ -1,45 +1,29 @@
+// Package metrics collects aggregate statistics from drift check results.
 package metrics
 
-import (
-	"time"
+import "github.com/example/consul-drift-check/internal/diff"
 
-	"github.com/your-org/consul-drift-check/internal/diff"
-)
-
-// Summary holds aggregated statistics for a drift check run.
+// Summary holds aggregate counts derived from a set of diff results.
 type Summary struct {
-	TotalKeys       int           `json:"total_keys"`
-	MatchedKeys     int           `json:"matched_keys"`
-	OnlyInSource    int           `json:"only_in_source"`
-	OnlyInDest      int           `json:"only_in_destination"`
-	ModifiedKeys    int           `json:"modified_keys"`
-	DriftDetected   bool          `json:"drift_detected"`
-	Duration        time.Duration `json:"duration_ms"`
-	CheckedAt       time.Time     `json:"checked_at"`
+	Added    int
+	Removed  int
+	Modified int
+	Total    int
 }
 
-// Collect builds a Summary from a slice of diff results and the elapsed duration.
-func Collect(results []diff.Result, duration time.Duration) Summary {
-	s := Summary{
-		Duration:  duration,
-		CheckedAt: time.Now().UTC(),
-	}
-
+// Collect aggregates diff.Result entries into a Summary.
+func Collect(results []diff.Result) Summary {
+	var s Summary
 	for _, r := range results {
 		switch r.Status {
-		case diff.StatusMatch:
-			s.MatchedKeys++
-		case diff.StatusOnlyInSource:
-			s.OnlyInSource++
-		case diff.StatusOnlyInDest:
-			s.OnlyInDest++
+		case diff.StatusAdded:
+			s.Added++
+		case diff.StatusRemoved:
+			s.Removed++
 		case diff.StatusModified:
-			s.ModifiedKeys++
+			s.Modified++
 		}
 	}
-
-	s.TotalKeys = s.MatchedKeys + s.OnlyInSource + s.OnlyInDest + s.ModifiedKeys
-	s.DriftDetected = s.OnlyInSource > 0 || s.OnlyInDest > 0 || s.ModifiedKeys > 0
-
+	s.Total = s.Added + s.Removed + s.Modified
 	return s
 }
