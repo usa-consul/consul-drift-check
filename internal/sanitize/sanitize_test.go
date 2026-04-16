@@ -63,3 +63,14 @@ func TestApply_NilEntrySkipped(t *testing.T) {
 		t.Fatalf("nil entry not skipped: %v", out)
 	}
 }
+
+func TestApply_LowerCaseAndTrimPrefix_Combined(t *testing.T) {
+	input := makeKVPairs("DC1/App/Key", "DC1/App/Other")
+	out := sanitize.Apply(input, sanitize.Options{LowerCase: true, TrimPrefix: "dc1"})
+	if len(out) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(out))
+	}
+	if out[0].Key != "app/key" || out[1].Key != "app/other" {
+		t.Fatalf("unexpected keys after combined transform: %v", out)
+	}
+}
