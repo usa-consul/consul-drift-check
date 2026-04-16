@@ -1,3 +1,5 @@
+// Package diff compares two sets of Consul KV entries and returns a list of
+// changes between source and destination namespaces.
 package diff
 
 import (
@@ -7,55 +9,42 @@ import (
 	"github.com/your-org/consul-drift-check/internal/consul"
 )
 
-// Status represents the type of drift detected for a key.
+// Status describes the kind of difference found for a key.
 type Status string
 
 const (
-	OnlyInSource      Status = "only_in_source"
-	OnlyInDestination Status = "only_in_destination"
-	Modified          Status = "modified"
-	InSync            Status = "in_sync"
+	StatusEqual             Status = "equal"
+	StatusOnlyInSource      Status = "only_in_source"
+	StatusOnlyInDestination Status = "only_in_destination"
+	StatusModified          Status = "modified"
 )
 
-// DiffResult holds the comparison outcome for a single KV key.
-type DiffResult struct {
-	Key         string  `json:"key"`
-	Status      Status  `json:"status"`
-	SourceValue []byte  `json:"source_value,omitempty"`
-	DestValue   []byte  `json:"dest_value,omitempty"`
+// Result represents a single key comparison outcome.
+type Result struct {
+	Key    string
+	Status Status
+	Source []byte
+	Dest   []byte
 }
 
-// Compare computes the diff between source and destination KV entry maps.
-func Compare(source, dest map[string]*consul.KVEntry) []DiffResult {
-	var results []DiffResult
+// Compare returns the diff between src and dst KV maps.
+func Compare(src, dst map[string]consul.KVPair) []Result {
+	var results []Result
 
-	for key, srcEntry := range source {
-		dstEntry, exists := dest[key]
-		if !exists {
-			results = append(results, DiffResult{
-				Key:         key,
-				Status:      OnlyInSource,
-				SourceValue: srcEntry.Value,
-			})
+	for key, sv := range src {
+		dv, ok := dst[key]
+		if !ok {
+			results = append(results, Result{Key: key, Status: StatusOnlyInSource, Source: sv.Value})
 			continue
 		}
-		if !bytesEqual(srcEntry.Value, dstEntry.Value) {
-			results = append(results, DiffResult{
-				Key:         key,
-				Status:      Modified,
-				SourceValue: srcEntry.Value,
-				DestValue:   dstEntry.Value,
-			})
+		if !bytesEqual(sv.Value, dv.Value) {
+			results = append(results, Result{Key: key, Status: StatusModified, Source: sv.Value, Dest: dv.Value})
 		}
 	}
 
-	for key, dstEntry := range dest {
-		if _, exists := source[key]; !exists {
-			results = append(results, DiffResult{
-				Key:       key,
-				Status:    OnlyInDestination,
-				DestValue: dstEntry.Value,
-			})
+	for key, dv := range dst {
+		if _, ok := src[key]; !ok {
+			results = append(results, Result{Key: key, Status: StatusOnlyInDestination, Dest: dv.Value})
 		}
 	}
 
@@ -67,7 +56,7 @@ func bytesEqual(a, b []byte) bool {
 	return bytes.Equal(a, b)
 }
 
-func sortByKey(results []DiffResult) {
+func sortByKey(results []Result) {
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Key < results[j].Key
 	})
