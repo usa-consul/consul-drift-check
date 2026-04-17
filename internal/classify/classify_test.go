@@ -64,3 +64,18 @@ func TestApply_EmptyResults(t *testing.T) {
 		t.Fatalf("expected empty slice")
 	}
 }
+
+func TestApply_ExactPrefixMatch(t *testing.T) {
+	// Ensure a rule only matches keys that start with the prefix,
+	// not keys where the prefix appears elsewhere in the path.
+	rules := []classify.Rule{
+		{Prefix: "prod/", Level: classify.LevelCritical},
+	}
+	input := makeResults("notprod/cfg", "staging/prod/cfg")
+	res := classify.Apply(input, rules)
+	for i, r := range res {
+		if r.Level != classify.LevelInfo {
+			t.Errorf("[%d] expected info for non-prefix match, got %s", i, r.Level)
+		}
+	}
+}
