@@ -46,6 +46,7 @@ func (l *Limiter) Wait(ctx context.Context, dc string) error {
 }
 
 // start initialises the token bucket goroutine for a datacenter.
+// Must be called with l.mu held.
 func (l *Limiter) start(dc string) {
 	bucket := make(chan struct{}, l.rps)
 	stop := make(chan struct{})
@@ -68,6 +69,17 @@ func (l *Limiter) start(dc string) {
 			}
 		}
 	}()
+}
+
+// StopDatacenter releases resources for a single datacenter.
+func (l *Limiter) StopDatacenter(dc string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if ch, ok := l.stopChs[dc]; ok {
+		close(ch)
+		delete(l.stopChs, dc)
+		delete(l.buckets, dc)
+	}
 }
 
 // Stop releases resources for all datacenters.
