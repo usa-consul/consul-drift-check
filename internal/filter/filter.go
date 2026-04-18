@@ -44,6 +44,17 @@ func Apply(entries api.KVPairs, opts Options) api.KVPairs {
 	return result
 }
 
+// Keys returns a set of keys from a KVPairs slice as a map for quick lookup.
+func Keys(entries api.KVPairs) map[string]struct{} {
+	keys := make(map[string]struct{}, len(entries))
+	for _, entry := range entries {
+		if entry != nil {
+			keys[entry.Key] = struct{}{}
+		}
+	}
+	return keys
+}
+
 // matchesIncludedPrefixes returns true if the key matches at least one of the
 // provided prefixes, or if no prefixes are specified (include all).
 func matchesIncludedPrefixes(key string, prefixes []string) bool {
