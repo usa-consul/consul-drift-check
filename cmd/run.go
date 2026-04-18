@@ -49,7 +49,11 @@ func runDriftCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(results) > 0 {
-		os.Exit(2)
+		os.Exit(exitCodeDrift)
 	}
 	return nil
 }
+
+// exitCodeDrift is the exit code used when drift is detected between
+// the source and destination Consul KV prefixes.
+const exitCodeDrift = 2
