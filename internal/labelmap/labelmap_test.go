@@ -68,3 +68,13 @@ func TestApply_LabelMapIsCopied(t *testing.T) {
 		t.Errorf("label maps should be independent copies")
 	}
 }
+
+func TestApply_EmptyPairs_ReturnsEmptyResults(t *testing.T) {
+	rules := []labelmap.Rule{
+		{Prefix: "app/", Labels: map[string]string{"service": "app"}},
+	}
+	results := labelmap.Apply(makePairs(), rules)
+	if len(results) != 0 {
+		t.Errorf("expected 0 results for empty input, got %d", len(results))
+	}
+}
